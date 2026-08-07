@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="../SimpleSystem.Business/SimpleSystem.Business.csproj" />
+  <Project Path="../SimpleSystem.DataAccess/SimpleSystem.DataAccess.csproj" />
+  <Project Path="SimpleSystem.csproj" />
+</Solution>

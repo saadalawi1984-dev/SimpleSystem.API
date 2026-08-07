@@ -1,0 +1,84 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "E:\\project windosform\\SimpleSystem\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{EDAF8B8F-9F81-C8D4-0DA9-F315E29656BD}|SimpleSystem.csproj|e:\\project windosform\\simplesystem\\controllers\\userscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{EDAF8B8F-9F81-C8D4-0DA9-F315E29656BD}|SimpleSystem.csproj|solutionrelative:controllers\\userscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{EDAF8B8F-9F81-C8D4-0DA9-F315E29656BD}|SimpleSystem.csproj|e:\\project windosform\\simplesystem\\controllers\\peoplecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{EDAF8B8F-9F81-C8D4-0DA9-F315E29656BD}|SimpleSystem.csproj|solutionrelative:controllers\\peoplecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{EDAF8B8F-9F81-C8D4-0DA9-F315E29656BD}|SimpleSystem.csproj|e:\\project windosform\\simplesystem\\controllers\\countriescontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{EDAF8B8F-9F81-C8D4-0DA9-F315E29656BD}|SimpleSystem.csproj|solutionrelative:controllers\\countriescontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{657CB11C-8171-8C58-5BA1-3D86A04CF101}|..\\SimpleSystem.DataAccess\\SimpleSystem.DataAccess.csproj|e:\\project windosform\\simplesystem.dataaccess\\data\\dataaccesssettings.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 1,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "DataAccessSettings.cs",
+              "DocumentMoniker": "E:\\project windosform\\SimpleSystem.DataAccess\\Data\\DataAccessSettings.cs",
+              "RelativeDocumentMoniker": "..\\SimpleSystem.DataAccess\\Data\\DataAccessSettings.cs",
+              "ToolTip": "E:\\project windosform\\SimpleSystem.DataAccess\\Data\\DataAccessSettings.cs",
+              "RelativeToolTip": "..\\SimpleSystem.DataAccess\\Data\\DataAccessSettings.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-05T22:56:50.486Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "UsersController.cs",
+              "DocumentMoniker": "E:\\project windosform\\SimpleSystem\\Controllers\\UsersController.cs",
+              "RelativeDocumentMoniker": "Controllers\\UsersController.cs",
+              "ToolTip": "E:\\project windosform\\SimpleSystem\\Controllers\\UsersController.cs",
+              "RelativeToolTip": "Controllers\\UsersController.cs",
+              "ViewState": "AgIAAAQAAACgAAAAAAAhwA4AAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-05T22:47:57.377Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "PeopleController.cs",
+              "DocumentMoniker": "E:\\project windosform\\SimpleSystem\\Controllers\\PeopleController.cs",
+              "RelativeDocumentMoniker": "Controllers\\PeopleController.cs",
+              "ToolTip": "E:\\project windosform\\SimpleSystem\\Controllers\\PeopleController.cs",
+              "RelativeToolTip": "Controllers\\PeopleController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAAWAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-05T22:47:31.491Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "CountriesController.cs",
+              "DocumentMoniker": "E:\\project windosform\\SimpleSystem\\Controllers\\CountriesController.cs",
+              "RelativeDocumentMoniker": "Controllers\\CountriesController.cs",
+              "ToolTip": "E:\\project windosform\\SimpleSystem\\Controllers\\CountriesController.cs",
+              "RelativeToolTip": "Controllers\\CountriesController.cs",
+              "ViewState": "AgIAAAQAAAAAAAAAAAAAAAwAAAA9AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-05T22:36:59.484Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
