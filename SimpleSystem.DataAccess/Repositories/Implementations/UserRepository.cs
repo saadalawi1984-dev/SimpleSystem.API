@@ -1,136 +1,171 @@
-﻿using System.Data;
 using Microsoft.Data.SqlClient;
 using SimpleSystem.DataAccess.Data;
 using SimpleSystem.DataAccess.Entities;
 using SimpleSystem.DataAccess.Repositories.Interfaces;
+using System;
+using System.Collections.Generic;
 
 namespace SimpleSystem.DataAccess.Repositories.Implementations
 {
     public class UserRepository : IUserRepository
     {
-        public List<User> GetAll()
+        private const string BaseSelectQuery = @"
+            SELECT UserId, PersonId, Username, PasswordHash, IsActive, CreatedDate 
+            FROM Users";
+
+        // دالة تحويل البيانات وآمنة من الـ Null
+        private User MapReaderToUser(SqlDataReader reader)
         {
-            var list = new List<User>();
-            using (var conn = SqlConnectionFactory.CreateConnection())
-            using (var cmd = new SqlCommand("SELECT UserId, PersonId, Username, PasswordHash, IsActive, CreatedDate FROM Users", conn))
+            return new User
             {
-                conn.Open();
-                using (var reader = cmd.ExecuteReader())
+                UserId = Convert.ToInt32(reader["UserId"]),
+                PersonId = Convert.ToInt32(reader["PersonId"]),
+                Username = reader["Username"] as string ?? string.Empty,
+                PasswordHash = reader["PasswordHash"] as string ?? string.Empty,
+
+                // حل أخطاء التحويل الضمني (Implicit conversion of bool?)
+                // نستخدم GetValueOrDefault لإعطاء قيمة افتراضية في حال كانت null
+                IsActive = reader["IsActive"] != DBNull.Value && Convert.ToBoolean(reader["IsActive"]),
+
+                CreatedDate = reader["CreatedDate"] == DBNull.Value
+                    ? DateTime.Now
+                    : Convert.ToDateTime(reader["CreatedDate"])
+            };
+        }
+
+        private User? GetSingleUser(string query, params SqlParameter[] parameters)
+        {
+            using (var connection = new SqlConnection(DataAccessSettings.ConnectionString))
+            using (var command = new SqlCommand(query, connection))
+            {
+                if (parameters != null)
                 {
-                    while (reader.Read())
+                    command.Parameters.AddRange(parameters);
+                }
+
+                connection.Open();
+                using (var reader = command.ExecuteReader())
+                {
+                    if (reader.Read())
                     {
-                        list.Add(new User
-                        {
-                            UserId = reader.GetInt32(0),
-                            PersonId = reader.GetInt32(1),
-                            Username = reader.GetString(2),
-                            PasswordHash = reader.GetString(3),
-                            IsActive = reader.GetBoolean(4),
-                            CreatedDate = reader.GetDateTime(5)
-                        });
+                        return MapReaderToUser(reader);
                     }
                 }
             }
-            return list;
+            return null;
+        }
+
+       
+
+        public List<User> GetAll()
+        {
+            var usersList = new List<User>();
+
+            using (var connection = new SqlConnection(DataAccessSettings.ConnectionString))
+            using (var command = new SqlCommand(BaseSelectQuery, connection))
+            {
+                connection.Open();
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        usersList.Add(MapReaderToUser(reader));
+                    }
+                }
+            }
+
+            return usersList;
         }
 
         public User? GetById(int userId)
         {
-            using (var conn = SqlConnectionFactory.CreateConnection())
-            using (var cmd = new SqlCommand("SELECT UserId, PersonId, Username, PasswordHash, IsActive, CreatedDate FROM Users WHERE UserId = @UserId", conn))
-            {
-                cmd.Parameters.AddWithValue("@UserId", userId);
-                conn.Open();
-                using (var reader = cmd.ExecuteReader())
-                {
-                    if (reader.Read())
-                    {
-                        return new User
-                        {
-                            UserId = reader.GetInt32(0),
-                            PersonId = reader.GetInt32(1),
-                            Username = reader.GetString(2),
-                            PasswordHash = reader.GetString(3),
-                            IsActive = reader.GetBoolean(4),
-                            CreatedDate = reader.GetDateTime(5)
-                        };
-                    }
-                }
-            }
-            return null;
+            string query = $"{BaseSelectQuery} WHERE UserId = @UserId";
+            return GetSingleUser(query, new SqlParameter("@UserId", userId));
         }
 
+        public User? GetByUsername(string username)
+        {
+            string query = $"{BaseSelectQuery} WHERE Username = @Username";
+            return GetSingleUser(query, new SqlParameter("@Username", username));
+        }
+
+        
         public User? GetByPersonId(int personId)
         {
-            using (var conn = SqlConnectionFactory.CreateConnection())
-            using (var cmd = new SqlCommand("SELECT UserId, PersonId, Username, PasswordHash, IsActive, CreatedDate FROM Users WHERE PersonId = @PersonId", conn))
-            {
-                cmd.Parameters.AddWithValue("@PersonId", personId);
-                conn.Open();
-                using (var reader = cmd.ExecuteReader())
-                {
-                    if (reader.Read())
-                    {
-                        return new User
-                        {
-                            UserId = reader.GetInt32(0),
-                            PersonId = reader.GetInt32(1),
-                            Username = reader.GetString(2),
-                            PasswordHash = reader.GetString(3),
-                            IsActive = reader.GetBoolean(4),
-                            CreatedDate = reader.GetDateTime(5)
-                        };
-                    }
-                }
-            }
-            return null;
+            string query = $"{BaseSelectQuery} WHERE PersonId = @PersonId";
+            return GetSingleUser(query, new SqlParameter("@PersonId", personId));
         }
 
+        
         public int Add(User user)
         {
-            using (var conn = SqlConnectionFactory.CreateConnection())
-            using (var cmd = new SqlCommand(@"
-                INSERT INTO Users (PersonId, Username, PasswordHash, IsActive, CreatedDate) 
-                VALUES (@PersonId, @Username, @PasswordHash, @IsActive, GETDATE()); 
-                SELECT SCOPE_IDENTITY();", conn))
-            {
-                cmd.Parameters.AddWithValue("@PersonId", user.PersonId);
-                cmd.Parameters.AddWithValue("@Username", user.Username);
-                cmd.Parameters.AddWithValue("@PasswordHash", user.PasswordHash);
-                cmd.Parameters.AddWithValue("@IsActive", user.IsActive);
+            string query = @"
+        INSERT INTO Users (PersonId, Username, PasswordHash, IsActive, CreatedDate)
+        VALUES (@PersonId, @Username, @PasswordHash, @IsActive, GETDATE());
+        SELECT SCOPE_IDENTITY();";
 
-                conn.Open();
-                var result = cmd.ExecuteScalar();
-                return Convert.ToInt32(result);
+            using (var connection = new SqlConnection(DataAccessSettings.ConnectionString))
+            using (var command = new SqlCommand(query, connection))
+            {
+                command.Parameters.AddWithValue("@PersonId", user.PersonId);
+                command.Parameters.AddWithValue("@Username", user.Username);
+                command.Parameters.AddWithValue("@PasswordHash", user.PasswordHash);
+
+                // التعامل مع Null بحذر للـ IsActive
+                command.Parameters.AddWithValue("@IsActive", (object?)user.IsActive ?? DBNull.Value);
+
+                connection.Open();
+                var result = command.ExecuteScalar();
+
+                if (result != null && int.TryParse(result.ToString(), out int newId))
+                {
+                    user.UserId = newId;
+                    return newId; // إرجاع الرقم التعريفي الجديد (ID)
+                }
             }
+
+            return -1; // إرجاع -1 في حال فشلت الإضافة
         }
 
+        // 3. حل خطأ: Update(User)
         public bool Update(User user)
         {
-            using (var conn = SqlConnectionFactory.CreateConnection())
-            using (var cmd = new SqlCommand(@"
+            string query = @"
                 UPDATE Users 
-                SET Username = @Username, PasswordHash = @PasswordHash, IsActive = @IsActive 
-                WHERE UserId = @UserId", conn))
-            {
-                cmd.Parameters.AddWithValue("@UserId", user.UserId);
-                cmd.Parameters.AddWithValue("@Username", user.Username);
-                cmd.Parameters.AddWithValue("@PasswordHash", user.PasswordHash);
-                cmd.Parameters.AddWithValue("@IsActive", user.IsActive);
+                SET PersonId = @PersonId,
+                    Username = @Username,
+                    PasswordHash = @PasswordHash,
+                    IsActive = @IsActive
+                WHERE UserId = @UserId";
 
-                conn.Open();
-                return cmd.ExecuteNonQuery() > 0;
+            using (var connection = new SqlConnection(DataAccessSettings.ConnectionString))
+            using (var command = new SqlCommand(query, connection))
+            {
+                command.Parameters.AddWithValue("@UserId", user.UserId);
+                command.Parameters.AddWithValue("@PersonId", user.PersonId);
+                command.Parameters.AddWithValue("@Username", user.Username);
+                command.Parameters.AddWithValue("@PasswordHash", user.PasswordHash);
+                command.Parameters.AddWithValue("@IsActive", user.IsActive);
+
+                connection.Open();
+                int rowsAffected = command.ExecuteNonQuery();
+                return rowsAffected > 0;
             }
         }
 
+        // 4. حل خطأ: Delete(int)
         public bool Delete(int userId)
         {
-            using (var conn = SqlConnectionFactory.CreateConnection())
-            using (var cmd = new SqlCommand("DELETE FROM Users WHERE UserId = @UserId", conn))
+            string query = "DELETE FROM Users WHERE UserId = @UserId";
+
+            using (var connection = new SqlConnection(DataAccessSettings.ConnectionString))
+            using (var command = new SqlCommand(query, connection))
             {
-                cmd.Parameters.AddWithValue("@UserId", userId);
-                conn.Open();
-                return cmd.ExecuteNonQuery() > 0;
+                command.Parameters.AddWithValue("@UserId", userId);
+
+                connection.Open();
+                int rowsAffected = command.ExecuteNonQuery();
+                return rowsAffected > 0;
             }
         }
     }
