@@ -1,6 +1,8 @@
-﻿using SimpleSystem.DataAccess.Entities;
+using SimpleSystem.DataAccess.Entities;
 using SimpleSystem.DataAccess.Repositories.Implementations;
 using SimpleSystem.DataAccess.Repositories.Interfaces;
+using System;
+using System.Collections.Generic;
 
 namespace SimpleSystem.Business
 {
@@ -15,8 +17,10 @@ namespace SimpleSystem.Business
         public int PersonId { get; set; }
         public string Username { get; set; } = string.Empty;
         public string PasswordHash { get; set; } = string.Empty;
+
+        // أنواع البيانات في طبقة Business
         public bool IsActive { get; set; } = true;
-        public DateTime CreatedDate { get; set; }
+        public DateTime CreatedDate { get; set; } = DateTime.Now;
 
         public UserBusiness(IUserRepository? userRepo = null)
         {
@@ -30,8 +34,13 @@ namespace SimpleSystem.Business
             this.PersonId = entity.PersonId;
             this.Username = entity.Username;
             this.PasswordHash = entity.PasswordHash;
-            this.IsActive = entity.IsActive;
-            this.CreatedDate = entity.CreatedDate;
+
+            // 1. حل خطأ التحويل للـ bool?: إعطاء true كقيمة افتراضية إذا كانت Null
+            this.IsActive = entity.IsActive ?? true;
+
+            // 2. حل خطأ التحويل للـ DateTime?: إعطاء DateTime.Now كقيمة افتراضية إذا كانت Null
+            this.CreatedDate = entity.CreatedDate ?? DateTime.Now;
+
             this.Mode = mode;
         }
 
