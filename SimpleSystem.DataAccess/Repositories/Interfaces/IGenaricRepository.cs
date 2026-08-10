@@ -1,19 +1,14 @@
-using SimpleSystem.DataAccess.Entities;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace SimpleSystem.DataAccess.Repositories.Interfaces
 {
-    internal interface IGenaricRepository<T>
+    public interface IGenaricRepository<T> where T : class
     {
-        List<T> GetAll();
-        T? GetById(int entityId);
-        int Add(T entity);
-        bool Update(T entity);
-        bool Delete(int entityId);
-
+        Task<List<T>> GetAllAsync();
+        Task<T?> GetByIdAsync(int entityId);
+        Task<int> AddAsync(T entity);
+        Task<bool> UpdateAsync(T entity);
+        Task<bool> DeleteAsync(int entityId);
     }
 }
