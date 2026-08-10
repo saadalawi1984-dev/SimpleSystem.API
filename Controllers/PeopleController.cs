@@ -1,6 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using SimpleSystem.Business;
 using SimpleSystem.DataAccess.Entities;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace SimpleSystem.API.Controllers
 {
@@ -8,12 +11,13 @@ namespace SimpleSystem.API.Controllers
     [Route("api/People")]
     public class PeopleController : ControllerBase
     {
+        // 1. جلب كل الأشخاص Async
         [HttpGet("All", Name = "GetAllPeople")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public ActionResult<IEnumerable<Person>> GetAllPeople()
+        public async Task<ActionResult<IEnumerable<Person>>> GetAllPeople()
         {
-            var people = PersonBusiness.GetAllPeople();
+            var people = await PersonBusiness.GetAllPeopleAsync();
             if (people == null || people.Count == 0)
             {
                 return NotFound("No people found.");
@@ -21,18 +25,19 @@ namespace SimpleSystem.API.Controllers
             return Ok(people);
         }
 
+        // 2. جلب شخص حسب الرقم التعريفي Async
         [HttpGet("{id}", Name = "GetPersonById")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public ActionResult<Person> GetPersonById(int id)
+        public async Task<ActionResult<Person>> GetPersonById(int id)
         {
             if (id <= 0)
             {
                 return BadRequest($"Invalid person ID: {id}");
             }
 
-            var person = PersonBusiness.Find(id);
+            var person = await PersonBusiness.FindAsync(id);
             if (person == null)
             {
                 return NotFound($"Person with ID {id} not found.");
@@ -41,10 +46,11 @@ namespace SimpleSystem.API.Controllers
             return Ok(person.ToEntity());
         }
 
+        // 3. إضافة شخص جديد Async
         [HttpPost(Name = "AddPerson")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public ActionResult<Person> AddPerson([FromBody] Person newPerson)
+        public async Task<ActionResult<Person>> AddPerson([FromBody] Person newPerson)
         {
             if (newPerson == null || string.IsNullOrWhiteSpace(newPerson.FirstName) || string.IsNullOrWhiteSpace(newPerson.LastName) || newPerson.CountryId <= 0)
             {
@@ -61,7 +67,7 @@ namespace SimpleSystem.API.Controllers
                 CountryId = newPerson.CountryId
             };
 
-            if (personBusiness.Save())
+            if (await personBusiness.SaveAsync())
             {
                 newPerson.PersonId = personBusiness.PersonId;
                 return CreatedAtRoute("GetPersonById", new { id = newPerson.PersonId }, newPerson);
@@ -70,18 +76,19 @@ namespace SimpleSystem.API.Controllers
             return BadRequest("Could not add the person.");
         }
 
+        // 4. تعديل بيانات شخص Async
         [HttpPut("{id}", Name = "UpdatePerson")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public ActionResult<Person> UpdatePerson(int id, [FromBody] Person updatedPerson)
+        public async Task<ActionResult<Person>> UpdatePerson(int id, [FromBody] Person updatedPerson)
         {
             if (id <= 0 || updatedPerson == null || string.IsNullOrWhiteSpace(updatedPerson.FirstName) || string.IsNullOrWhiteSpace(updatedPerson.LastName))
             {
                 return BadRequest("Invalid person data.");
             }
 
-            var personBusiness = PersonBusiness.Find(id);
+            var personBusiness = await PersonBusiness.FindAsync(id);
             if (personBusiness == null)
             {
                 return NotFound($"Person with ID {id} not found.");
@@ -94,7 +101,7 @@ namespace SimpleSystem.API.Controllers
             personBusiness.Email = updatedPerson.Email;
             personBusiness.CountryId = updatedPerson.CountryId;
 
-            if (personBusiness.Save())
+            if (await personBusiness.SaveAsync())
             {
                 return Ok(personBusiness.ToEntity());
             }
@@ -102,18 +109,19 @@ namespace SimpleSystem.API.Controllers
             return BadRequest("Could not update the person.");
         }
 
+        // 5. حذف شخص Async
         [HttpDelete("{id}", Name = "DeletePerson")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public ActionResult DeletePerson(int id)
+        public async Task<ActionResult> DeletePerson(int id)
         {
             if (id <= 0)
             {
                 return BadRequest($"Invalid person ID: {id}");
             }
 
-            if (PersonBusiness.DeletePerson(id))
+            if (await PersonBusiness.DeletePersonAsync(id))
             {
                 return Ok($"Person with ID {id} has been deleted.");
             }
