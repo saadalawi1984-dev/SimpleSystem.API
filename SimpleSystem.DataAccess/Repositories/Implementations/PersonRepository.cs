@@ -14,18 +14,21 @@ namespace SimpleSystem.DataAccess.Repositories.Implementations
         private const string BaseSelectQuery = "SELECT PersonId, FirstName, LastName, DateOfBirth, Phone, Email, CountryId FROM People";
 
         private Person MapReaderToPerson(SqlDataReader reader)
-        {
-            return new Person
-            {
-                PersonId = reader.GetInt32(0),
-                FirstName = reader.GetString(1),
-                LastName = reader.GetString(2),
-                DateOfBirth = reader.GetDateTime(3),
-                Phone = reader.IsDBNull(4) ? null : reader.GetString(4),
-                Email = reader.IsDBNull(5) ? null : reader.GetString(5),
-                CountryId = reader.GetInt32(6) // تم التعديل إلى CountryId
-            };
-        }
+{
+    int phoneOrdinal = reader.GetOrdinal("Phone");
+    int emailOrdinal = reader.GetOrdinal("Email");
+
+    return new Person
+    {
+        PersonId = reader.GetInt32(reader.GetOrdinal("PersonId")),
+        FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
+        LastName = reader.GetString(reader.GetOrdinal("LastName")),
+        DateOfBirth = reader.GetDateTime(reader.GetOrdinal("DateOfBirth")),
+        Phone = reader.IsDBNull(phoneOrdinal) ? null : reader.GetString(phoneOrdinal),
+        Email = reader.IsDBNull(emailOrdinal) ? null : reader.GetString(emailOrdinal),
+        CountryId = reader.GetInt32(reader.GetOrdinal("CountryId"))
+    };
+}
 
         // 1. GetAllAsync
         public async Task<List<Person>> GetAllAsync()
