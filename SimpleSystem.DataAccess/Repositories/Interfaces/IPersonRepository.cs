@@ -1,13 +1,11 @@
-﻿using SimpleSystem.DataAccess.Entities;
+using System.Threading.Tasks;
+using SimpleSystem.DataAccess.Entities;
 
 namespace SimpleSystem.DataAccess.Repositories.Interfaces
 {
-    public interface IPersonRepository
+    public interface IPersonRepository : IGenaricRepository<Person>
     {
-        List<Person> GetAll();
-        Person? GetById(int personId);
-        int Add(Person person);
-        bool Update(Person person);
-        bool Delete(int personId);
+       
+        Task<Person?> GetByNationalNoAsync(string nationalNo);
     }
 }
