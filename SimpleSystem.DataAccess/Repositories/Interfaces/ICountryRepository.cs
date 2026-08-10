@@ -1,13 +1,11 @@
-﻿using SimpleSystem.DataAccess.Entities;
+using System.Threading.Tasks;
+using SimpleSystem.DataAccess.Entities;
 
 namespace SimpleSystem.DataAccess.Repositories.Interfaces
 {
-    public interface ICountryRepository
+    public interface ICountryRepository : IGenaricRepository<Country>
     {
-        List<Country> GetAll();
-        Country? GetById(int countryId);
-        int Add(Country country);
-        bool Update(Country country);
-        bool Delete(int countryId);
+        // إذا كان لديك دالة خاصة بالدول فقط (مثل البحث باسم الدولة)، يمكنك إضافتها هنا:
+        Task<Country?> GetByNameAsync(string countryName);
     }
 }
