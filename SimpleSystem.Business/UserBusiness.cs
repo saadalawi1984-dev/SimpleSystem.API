@@ -3,6 +3,7 @@ using SimpleSystem.DataAccess.Repositories.Implementations;
 using SimpleSystem.DataAccess.Repositories.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace SimpleSystem.Business
 {
@@ -17,8 +18,6 @@ namespace SimpleSystem.Business
         public int PersonId { get; set; }
         public string Username { get; set; } = string.Empty;
         public string PasswordHash { get; set; } = string.Empty;
-
-        // أنواع البيانات في طبقة Business
         public bool IsActive { get; set; } = true;
         public DateTime CreatedDate { get; set; } = DateTime.Now;
 
@@ -34,13 +33,8 @@ namespace SimpleSystem.Business
             this.PersonId = entity.PersonId;
             this.Username = entity.Username;
             this.PasswordHash = entity.PasswordHash;
-
-            // 1. حل خطأ التحويل للـ bool?: إعطاء true كقيمة افتراضية إذا كانت Null
             this.IsActive = entity.IsActive ?? true;
-
-            // 2. حل خطأ التحويل للـ DateTime?: إعطاء DateTime.Now كقيمة افتراضية إذا كانت Null
             this.CreatedDate = entity.CreatedDate ?? DateTime.Now;
-
             this.Mode = mode;
         }
 
@@ -57,38 +51,38 @@ namespace SimpleSystem.Business
             };
         }
 
-        public static List<User> GetAllUsers(IUserRepository? repo = null)
+        public static async Task<List<User>> GetAllUsersAsync(IUserRepository? repo = null)
         {
             var r = repo ?? new UserRepository();
-            return r.GetAll();
+            return await r.GetAllAsync();
         }
 
-        public static UserBusiness? Find(int id, IUserRepository? repo = null)
+        public static async Task<UserBusiness?> FindAsync(int id, IUserRepository? repo = null)
         {
             var r = repo ?? new UserRepository();
-            var user = r.GetById(id);
+            var user = await r.GetByIdAsync(id);
             if (user != null)
                 return new UserBusiness(user, enMode.Update, r);
 
             return null;
         }
 
-        public static UserBusiness? FindByPersonId(int personId, IUserRepository? repo = null)
+        public static async Task<UserBusiness?> FindByPersonIdAsync(int personId, IUserRepository? repo = null)
         {
             var r = repo ?? new UserRepository();
-            var user = r.GetByPersonId(personId);
+            var user = await r.GetByPersonIdAsync(personId);
             if (user != null)
                 return new UserBusiness(user, enMode.Update, r);
 
             return null;
         }
 
-        public bool Save()
+        public async Task<bool> SaveAsync()
         {
             switch (Mode)
             {
                 case enMode.AddNew:
-                    int newId = _userRepo.Add(this.ToEntity());
+                    int newId = await _userRepo.AddAsync(this.ToEntity());
                     if (newId > 0)
                     {
                         this.UserId = newId;
@@ -98,15 +92,15 @@ namespace SimpleSystem.Business
                     return false;
 
                 case enMode.Update:
-                    return _userRepo.Update(this.ToEntity());
+                    return await _userRepo.UpdateAsync(this.ToEntity());
             }
             return false;
         }
 
-        public static bool DeleteUser(int id, IUserRepository? repo = null)
+        public static async Task<bool> DeleteUserAsync(int id, IUserRepository? repo = null)
         {
             var r = repo ?? new UserRepository();
-            return r.Delete(id);
+            return await r.DeleteAsync(id);
         }
     }
 }
