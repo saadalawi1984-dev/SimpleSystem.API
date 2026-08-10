@@ -1,4 +1,7 @@
-﻿using System.Data;
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using SimpleSystem.DataAccess.Data;
 using SimpleSystem.DataAccess.Entities;
@@ -8,112 +11,151 @@ namespace SimpleSystem.DataAccess.Repositories.Implementations
 {
     public class PersonRepository : IPersonRepository
     {
-        public List<Person> GetAll()
+        private const string BaseSelectQuery = "SELECT PersonId, FirstName, LastName, DateOfBirth, Phone, Email, CountryId FROM People";
+
+        private Person MapReaderToPerson(SqlDataReader reader)
+        {
+            return new Person
+            {
+                PersonId = reader.GetInt32(0),
+                FirstName = reader.GetString(1),
+                LastName = reader.GetString(2),
+                DateOfBirth = reader.GetDateTime(3),
+                Phone = reader.IsDBNull(4) ? null : reader.GetString(4),
+                Email = reader.IsDBNull(5) ? null : reader.GetString(5),
+                CountryId = reader.GetInt32(6) // تم التعديل إلى CountryId
+            };
+        }
+
+        // 1. GetAllAsync
+        public async Task<List<Person>> GetAllAsync()
         {
             var list = new List<Person>();
             using (var conn = SqlConnectionFactory.CreateConnection())
-            using (var cmd = new SqlCommand("SELECT PersonId, FirstName, LastName, DateOfBirth, Phone, Email, CountryId FROM People", conn))
+            using (var cmd = new SqlCommand(BaseSelectQuery, conn))
             {
-                conn.Open();
-                using (var reader = cmd.ExecuteReader())
+                await conn.OpenAsync();
+                using (var reader = await cmd.ExecuteReaderAsync())
                 {
-                    while (reader.Read())
+                    while (await reader.ReadAsync())
                     {
-                        list.Add(new Person
-                        {
-                            PersonId = reader.GetInt32(0),
-                            FirstName = reader.GetString(1),
-                            LastName = reader.GetString(2),
-                            DateOfBirth = reader.GetDateTime(3),
-                            Phone = reader.IsDBNull(4) ? null : reader.GetString(4),
-                            Email = reader.IsDBNull(5) ? null : reader.GetString(5),
-                            CountryId = reader.GetInt32(6)
-                        });
+                        list.Add(MapReaderToPerson((SqlDataReader)reader));
                     }
                 }
             }
             return list;
         }
 
-        public Person? GetById(int personId)
+        // 2. GetByIdAsync
+        public async Task<Person?> GetByIdAsync(int entityId)
         {
+            string query = $"{BaseSelectQuery} WHERE PersonId = @PersonId";
             using (var conn = SqlConnectionFactory.CreateConnection())
-            using (var cmd = new SqlCommand("SELECT PersonId, FirstName, LastName, DateOfBirth, Phone, Email, CountryId FROM People WHERE PersonId = @PersonId", conn))
+            using (var cmd = new SqlCommand(query, conn))
             {
-                cmd.Parameters.AddWithValue("@PersonId", personId);
-                conn.Open();
-                using (var reader = cmd.ExecuteReader())
+                cmd.Parameters.AddWithValue("@PersonId", entityId);
+                await conn.OpenAsync();
+                using (var reader = await cmd.ExecuteReaderAsync())
                 {
-                    if (reader.Read())
+                    if (await reader.ReadAsync())
                     {
-                        return new Person
-                        {
-                            PersonId = reader.GetInt32(0),
-                            FirstName = reader.GetString(1),
-                            LastName = reader.GetString(2),
-                            DateOfBirth = reader.GetDateTime(3),
-                            Phone = reader.IsDBNull(4) ? null : reader.GetString(4),
-                            Email = reader.IsDBNull(5) ? null : reader.GetString(5),
-                            CountryId = reader.GetInt32(6)
-                        };
+                        return MapReaderToPerson((SqlDataReader)reader);
                     }
                 }
             }
             return null;
         }
 
-        public int Add(Person person)
+        // 3. AddAsync
+        public async Task<int> AddAsync(Person entity)
         {
-            using (var conn = SqlConnectionFactory.CreateConnection())
-            using (var cmd = new SqlCommand(@"
+            string query = @"
                 INSERT INTO People (FirstName, LastName, DateOfBirth, Phone, Email, CountryId) 
                 VALUES (@FirstName, @LastName, @DateOfBirth, @Phone, @Email, @CountryId); 
-                SELECT SCOPE_IDENTITY();", conn))
-            {
-                cmd.Parameters.AddWithValue("@FirstName", person.FirstName);
-                cmd.Parameters.AddWithValue("@LastName", person.LastName);
-                cmd.Parameters.AddWithValue("@DateOfBirth", person.DateOfBirth);
-                cmd.Parameters.AddWithValue("@Phone", (object?)person.Phone ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@Email", (object?)person.Email ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@CountryId", person.CountryId);
+                SELECT SCOPE_IDENTITY();";
 
-                conn.Open();
-                var result = cmd.ExecuteScalar();
-                return Convert.ToInt32(result);
+            using (var conn = SqlConnectionFactory.CreateConnection())
+            using (var cmd = new SqlCommand(query, conn))
+            {
+                cmd.Parameters.AddWithValue("@FirstName", entity.FirstName ?? string.Empty);
+                cmd.Parameters.AddWithValue("@LastName", entity.LastName ?? string.Empty);
+                cmd.Parameters.AddWithValue("@DateOfBirth", entity.DateOfBirth);
+                cmd.Parameters.AddWithValue("@Phone", (object?)entity.Phone ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@Email", (object?)entity.Email ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@CountryId", entity.CountryId); // تم التعديل إلى CountryId
+
+                await conn.OpenAsync();
+                var result = await cmd.ExecuteScalarAsync();
+
+                if (result != null && int.TryParse(result.ToString(), out int newId))
+                {
+                    entity.PersonId = newId;
+                    return newId;
+                }
             }
+            return -1;
         }
 
-        public bool Update(Person person)
+        // 4. UpdateAsync
+        public async Task<bool> UpdateAsync(Person entity)
         {
-            using (var conn = SqlConnectionFactory.CreateConnection())
-            using (var cmd = new SqlCommand(@"
+            string query = @"
                 UPDATE People 
                 SET FirstName = @FirstName, LastName = @LastName, DateOfBirth = @DateOfBirth, 
                     Phone = @Phone, Email = @Email, CountryId = @CountryId 
-                WHERE PersonId = @PersonId", conn))
-            {
-                cmd.Parameters.AddWithValue("@PersonId", person.PersonId);
-                cmd.Parameters.AddWithValue("@FirstName", person.FirstName);
-                cmd.Parameters.AddWithValue("@LastName", person.LastName);
-                cmd.Parameters.AddWithValue("@DateOfBirth", person.DateOfBirth);
-                cmd.Parameters.AddWithValue("@Phone", (object?)person.Phone ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@Email", (object?)person.Email ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@CountryId", person.CountryId);
+                WHERE PersonId = @PersonId";
 
-                conn.Open();
-                return cmd.ExecuteNonQuery() > 0;
+            using (var conn = SqlConnectionFactory.CreateConnection())
+            using (var cmd = new SqlCommand(query, conn))
+            {
+                cmd.Parameters.AddWithValue("@PersonId", entity.PersonId);
+                cmd.Parameters.AddWithValue("@FirstName", entity.FirstName ?? string.Empty);
+                cmd.Parameters.AddWithValue("@LastName", entity.LastName ?? string.Empty);
+                cmd.Parameters.AddWithValue("@DateOfBirth", entity.DateOfBirth);
+                cmd.Parameters.AddWithValue("@Phone", (object?)entity.Phone ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@Email", (object?)entity.Email ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@CountryId", entity.CountryId); // تم التعديل إلى CountryId
+
+                await conn.OpenAsync();
+                int rowsAffected = await cmd.ExecuteNonQueryAsync();
+                return rowsAffected > 0;
             }
         }
 
-        public bool Delete(int personId)
+        // 5. DeleteAsync
+        public async Task<bool> DeleteAsync(int entityId)
         {
+            string query = "DELETE FROM People WHERE PersonId = @PersonId";
+
             using (var conn = SqlConnectionFactory.CreateConnection())
-            using (var cmd = new SqlCommand("DELETE FROM People WHERE PersonId = @PersonId", conn))
+            using (var cmd = new SqlCommand(query, conn))
             {
-                cmd.Parameters.AddWithValue("@PersonId", personId);
-                conn.Open();
-                return cmd.ExecuteNonQuery() > 0;
+                cmd.Parameters.AddWithValue("@PersonId", entityId);
+                await conn.OpenAsync();
+                int rowsAffected = await cmd.ExecuteNonQueryAsync();
+                return rowsAffected > 0;
             }
+        }
+
+        // 6. GetByNationalNoAsync
+        public async Task<Person?> GetByNationalNoAsync(string nationalNo)
+        {
+            string query = $"{BaseSelectQuery} WHERE NationalNo = @NationalNo";
+
+            using (var conn = SqlConnectionFactory.CreateConnection())
+            using (var cmd = new SqlCommand(query, conn))
+            {
+                cmd.Parameters.AddWithValue("@NationalNo", nationalNo);
+                await conn.OpenAsync();
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    if (await reader.ReadAsync())
+                    {
+                        return MapReaderToPerson((SqlDataReader)reader);
+                    }
+                }
+            }
+            return null;
         }
     }
 }
