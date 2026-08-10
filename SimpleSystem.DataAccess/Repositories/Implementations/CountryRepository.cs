@@ -1,100 +1,133 @@
-﻿using System.Data;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
-using SimpleSystem.DataAccess.Data;
 using SimpleSystem.DataAccess.Entities;
+using SimpleSystem.DataAccess.Data;
 using SimpleSystem.DataAccess.Repositories.Interfaces;
 
 namespace SimpleSystem.DataAccess.Repositories.Implementations
 {
     public class CountryRepository : ICountryRepository
     {
-        public List<Country> GetAll()
+        private const string BaseSelectQuery = "SELECT CountryId, CountryName FROM Countries";
+
+        private Country MapReaderToCountry(SqlDataReader reader)
+        {
+            return new Country
+            {
+                CountryId = Convert.ToInt32(reader["CountryId"]),
+                CountryName = reader["CountryName"] as string ?? string.Empty
+            };
+        }
+
+        // 1. GetAllAsync
+        public async Task<List<Country>> GetAllAsync()
         {
             var list = new List<Country>();
-            using (var conn = SqlConnectionFactory.CreateConnection())
-            using (var cmd = new SqlCommand("SELECT CountryId, CountryName, CountryCode FROM Countries", conn))
+            using (var connection = new SqlConnection(DataAccessSettings.ConnectionString))
+            using (var command = new SqlCommand(BaseSelectQuery, connection))
             {
-                conn.Open();
-                using (var reader = cmd.ExecuteReader())
+                await connection.OpenAsync();
+                using (var reader = await command.ExecuteReaderAsync())
                 {
-                    while (reader.Read())
+                    while (await reader.ReadAsync())
                     {
-                        list.Add(new Country
-                        {
-                            CountryId = reader.GetInt32(0),
-                            CountryName = reader.GetString(1),
-                            CountryCode = reader.GetString(2)
-                        });
+                        list.Add(MapReaderToCountry(reader));
                     }
                 }
             }
             return list;
         }
 
-        public Country? GetById(int countryId)
+        // 2. GetByIdAsync
+        public async Task<Country?> GetByIdAsync(int entityId)
         {
-            using (var conn = SqlConnectionFactory.CreateConnection())
-            using (var cmd = new SqlCommand("SELECT CountryId, CountryName, CountryCode FROM Countries WHERE CountryId = @CountryId", conn))
+            string query = $"{BaseSelectQuery} WHERE CountryId = @CountryId";
+            using (var connection = new SqlConnection(DataAccessSettings.ConnectionString))
+            using (var command = new SqlCommand(query, connection))
             {
-                cmd.Parameters.AddWithValue("@CountryId", countryId);
-                conn.Open();
-                using (var reader = cmd.ExecuteReader())
+                command.Parameters.AddWithValue("@CountryId", entityId);
+                await connection.OpenAsync();
+                using (var reader = await command.ExecuteReaderAsync())
                 {
-                    if (reader.Read())
-                    {
-                        return new Country
-                        {
-                            CountryId = reader.GetInt32(0),
-                            CountryName = reader.GetString(1),
-                            CountryCode = reader.GetString(2)
-                        };
-                    }
+                    if (await reader.ReadAsync())
+                        return MapReaderToCountry(reader);
                 }
             }
             return null;
         }
 
-        public int Add(Country country)
+        // 3. AddAsync
+        public async Task<int> AddAsync(Country entity)
         {
-            using (var conn = SqlConnectionFactory.CreateConnection())
-            using (var cmd = new SqlCommand(@"
-                INSERT INTO Countries (CountryName, CountryCode) 
-                VALUES (@CountryName, @CountryCode); 
-                SELECT SCOPE_IDENTITY();", conn))
+            string query = @"
+                INSERT INTO Countries (CountryName) VALUES (@CountryName);
+                SELECT SCOPE_IDENTITY();";
+
+            using (var connection = new SqlConnection(DataAccessSettings.ConnectionString))
+            using (var command = new SqlCommand(query, connection))
             {
-                cmd.Parameters.AddWithValue("@CountryName", country.CountryName);
-                cmd.Parameters.AddWithValue("@CountryCode", country.CountryCode);
-                conn.Open();
-                var result = cmd.ExecuteScalar();
-                return Convert.ToInt32(result);
+                command.Parameters.AddWithValue("@CountryName", entity.CountryName);
+                await connection.OpenAsync();
+                var result = await command.ExecuteScalarAsync();
+
+                if (result != null && int.TryParse(result.ToString(), out int newId))
+                {
+                    entity.CountryId = newId;
+                    return newId;
+                }
+            }
+            return -1;
+        }
+
+        // 4. UpdateAsync
+        public async Task<bool> UpdateAsync(Country entity)
+        {
+            string query = "UPDATE Countries SET CountryName = @CountryName WHERE CountryId = @CountryId";
+
+            using (var connection = new SqlConnection(DataAccessSettings.ConnectionString))
+            using (var command = new SqlCommand(query, connection))
+            {
+                command.Parameters.AddWithValue("@CountryId", entity.CountryId);
+                command.Parameters.AddWithValue("@CountryName", entity.CountryName);
+                await connection.OpenAsync();
+                int rowsAffected = await command.ExecuteNonQueryAsync();
+                return rowsAffected > 0;
             }
         }
 
-        public bool Update(Country country)
+        // 5. DeleteAsync
+        public async Task<bool> DeleteAsync(int entityId)
         {
-            using (var conn = SqlConnectionFactory.CreateConnection())
-            using (var cmd = new SqlCommand(@"
-                UPDATE Countries 
-                SET CountryName = @CountryName, CountryCode = @CountryCode 
-                WHERE CountryId = @CountryId", conn))
+            string query = "DELETE FROM Countries WHERE CountryId = @CountryId";
+
+            using (var connection = new SqlConnection(DataAccessSettings.ConnectionString))
+            using (var command = new SqlCommand(query, connection))
             {
-                cmd.Parameters.AddWithValue("@CountryId", country.CountryId);
-                cmd.Parameters.AddWithValue("@CountryName", country.CountryName);
-                cmd.Parameters.AddWithValue("@CountryCode", country.CountryCode);
-                conn.Open();
-                return cmd.ExecuteNonQuery() > 0;
+                command.Parameters.AddWithValue("@CountryId", entityId);
+                await connection.OpenAsync();
+                int rowsAffected = await command.ExecuteNonQueryAsync();
+                return rowsAffected > 0;
             }
         }
 
-        public bool Delete(int countryId)
+        // 6. GetByNameAsync (الدالة الخاصة)
+        public async Task<Country?> GetByNameAsync(string countryName)
         {
-            using (var conn = SqlConnectionFactory.CreateConnection())
-            using (var cmd = new SqlCommand("DELETE FROM Countries WHERE CountryId = @CountryId", conn))
+            string query = $"{BaseSelectQuery} WHERE CountryName = @CountryName";
+            using (var connection = new SqlConnection(DataAccessSettings.ConnectionString))
+            using (var command = new SqlCommand(query, connection))
             {
-                cmd.Parameters.AddWithValue("@CountryId", countryId);
-                conn.Open();
-                return cmd.ExecuteNonQuery() > 0;
+                command.Parameters.AddWithValue("@CountryName", countryName);
+                await connection.OpenAsync();
+                using (var reader = await command.ExecuteReaderAsync())
+                {
+                    if (await reader.ReadAsync())
+                        return MapReaderToCountry(reader);
+                }
             }
+            return null;
         }
     }
 }
