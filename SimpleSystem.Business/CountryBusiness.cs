@@ -1,7 +1,8 @@
-﻿using SimpleSystem.DataAccess.Entities;
+using SimpleSystem.DataAccess.Entities;
 using SimpleSystem.DataAccess.Repositories.Implementations;
 using SimpleSystem.DataAccess.Repositories.Interfaces;
-using System.Diagnostics.Metrics;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace SimpleSystem.Business
 {
@@ -41,28 +42,42 @@ namespace SimpleSystem.Business
             };
         }
 
-        public static List<Country> GetAllCountries(ICountryRepository? repo = null)
+        // 1. جلب كافة الدول Async
+        public static async Task<List<Country>> GetAllCountriesAsync(ICountryRepository? repo = null)
         {
             var r = repo ?? new CountryRepository();
-            return r.GetAll();
+            return await r.GetAllAsync();
         }
 
-        public static CountryBusiness? Find(int id, ICountryRepository? repo = null)
+        // 2. البحث برقم الدولة Async
+        public static async Task<CountryBusiness?> FindAsync(int id, ICountryRepository? repo = null)
         {
             var r = repo ?? new CountryRepository();
-            var country = r.GetById(id);
+            var country = await r.GetByIdAsync(id);
             if (country != null)
                 return new CountryBusiness(country, enMode.Update, r);
 
             return null;
         }
 
-        public bool Save()
+        // 3. البحث باسم الدولة Async (دالة خاصة بالـ Country)
+        public static async Task<CountryBusiness?> FindByNameAsync(string countryName, ICountryRepository? repo = null)
+        {
+            var r = repo ?? new CountryRepository();
+            var country = await r.GetByNameAsync(countryName);
+            if (country != null)
+                return new CountryBusiness(country, enMode.Update, r);
+
+            return null;
+        }
+
+        // 4. حفظ البيانات (إضافة / تعديل) Async
+        public async Task<bool> SaveAsync()
         {
             switch (Mode)
             {
                 case enMode.AddNew:
-                    int newId = _countryRepo.Add(this.ToEntity());
+                    int newId = await _countryRepo.AddAsync(this.ToEntity());
                     if (newId > 0)
                     {
                         this.CountryId = newId;
@@ -72,15 +87,16 @@ namespace SimpleSystem.Business
                     return false;
 
                 case enMode.Update:
-                    return _countryRepo.Update(this.ToEntity());
+                    return await _countryRepo.UpdateAsync(this.ToEntity());
             }
             return false;
         }
 
-        public static bool DeleteCountry(int id, ICountryRepository? repo = null)
+        // 5. حذف دولة Async
+        public static async Task<bool> DeleteCountryAsync(int id, ICountryRepository? repo = null)
         {
             var r = repo ?? new CountryRepository();
-            return r.Delete(id);
+            return await r.DeleteAsync(id);
         }
     }
 }
