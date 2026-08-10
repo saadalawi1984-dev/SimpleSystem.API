@@ -1,9 +1,11 @@
+using System.Threading.Tasks;
 using SimpleSystem.DataAccess.Entities;
 
 namespace SimpleSystem.DataAccess.Repositories.Interfaces
 {
-    public interface IUserRepository: IGenaricRepository
+    public interface IUserRepository : IGenaricRepository<User>
     {
-        User? GetByPersonId(int personId);
+        Task<User?> GetByPersonIdAsync(int personId);
+        Task<User?> GetByUsernameAsync(string username);
     }
 }
