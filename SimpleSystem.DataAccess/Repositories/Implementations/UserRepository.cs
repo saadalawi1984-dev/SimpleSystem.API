@@ -1,9 +1,10 @@
-using Microsoft.Data.SqlClient;
-using SimpleSystem.DataAccess.Data;
-using SimpleSystem.DataAccess.Entities;
-using SimpleSystem.DataAccess.Repositories.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using Microsoft.Data.SqlClient;
+using SimpleSystem.DataAccess.Entities;
+using SimpleSystem.DataAccess.Data;
+using SimpleSystem.DataAccess.Repositories.Interfaces;
 
 namespace SimpleSystem.DataAccess.Repositories.Implementations
 {
@@ -13,7 +14,6 @@ namespace SimpleSystem.DataAccess.Repositories.Implementations
             SELECT UserId, PersonId, Username, PasswordHash, IsActive, CreatedDate 
             FROM Users";
 
-        // دالة تحويل البيانات وآمنة من الـ Null
         private User MapReaderToUser(SqlDataReader reader)
         {
             return new User
@@ -22,18 +22,12 @@ namespace SimpleSystem.DataAccess.Repositories.Implementations
                 PersonId = Convert.ToInt32(reader["PersonId"]),
                 Username = reader["Username"] as string ?? string.Empty,
                 PasswordHash = reader["PasswordHash"] as string ?? string.Empty,
-
-                // حل أخطاء التحويل الضمني (Implicit conversion of bool?)
-                // نستخدم GetValueOrDefault لإعطاء قيمة افتراضية في حال كانت null
                 IsActive = reader["IsActive"] != DBNull.Value && Convert.ToBoolean(reader["IsActive"]),
-
-                CreatedDate = reader["CreatedDate"] == DBNull.Value
-                    ? DateTime.Now
-                    : Convert.ToDateTime(reader["CreatedDate"])
+                CreatedDate = reader["CreatedDate"] == DBNull.Value ? DateTime.Now : Convert.ToDateTime(reader["CreatedDate"])
             };
         }
 
-        private User? GetSingleUser(string query, params SqlParameter[] parameters)
+        private async Task<User?> GetSingleUserAsync(string query, params SqlParameter[] parameters)
         {
             using (var connection = new SqlConnection(DataAccessSettings.ConnectionString))
             using (var command = new SqlCommand(query, connection))
@@ -43,10 +37,10 @@ namespace SimpleSystem.DataAccess.Repositories.Implementations
                     command.Parameters.AddRange(parameters);
                 }
 
-                connection.Open();
-                using (var reader = command.ExecuteReader())
+                await connection.OpenAsync();
+                using (var reader = await command.ExecuteReaderAsync())
                 {
-                    if (reader.Read())
+                    if (await reader.ReadAsync())
                     {
                         return MapReaderToUser(reader);
                     }
@@ -55,19 +49,19 @@ namespace SimpleSystem.DataAccess.Repositories.Implementations
             return null;
         }
 
-       
+        
 
-        public List<User> GetAll()
+        public async Task<List<User>> GetAllAsync()
         {
             var usersList = new List<User>();
 
             using (var connection = new SqlConnection(DataAccessSettings.ConnectionString))
             using (var command = new SqlCommand(BaseSelectQuery, connection))
             {
-                connection.Open();
-                using (var reader = command.ExecuteReader())
+                await connection.OpenAsync();
+                using (var reader = await command.ExecuteReaderAsync())
                 {
-                    while (reader.Read())
+                    while (await reader.ReadAsync())
                     {
                         usersList.Add(MapReaderToUser(reader));
                     }
@@ -77,58 +71,42 @@ namespace SimpleSystem.DataAccess.Repositories.Implementations
             return usersList;
         }
 
-        public User? GetById(int userId)
+        public async Task<User?> GetByIdAsync(int entityId)
         {
             string query = $"{BaseSelectQuery} WHERE UserId = @UserId";
-            return GetSingleUser(query, new SqlParameter("@UserId", userId));
+            return await GetSingleUserAsync(query, new SqlParameter("@UserId", entityId));
         }
 
-        public User? GetByUsername(string username)
-        {
-            string query = $"{BaseSelectQuery} WHERE Username = @Username";
-            return GetSingleUser(query, new SqlParameter("@Username", username));
-        }
-
-        
-        public User? GetByPersonId(int personId)
-        {
-            string query = $"{BaseSelectQuery} WHERE PersonId = @PersonId";
-            return GetSingleUser(query, new SqlParameter("@PersonId", personId));
-        }
-
-        
-        public int Add(User user)
+        public async Task<int> AddAsync(User entity)
         {
             string query = @"
-        INSERT INTO Users (PersonId, Username, PasswordHash, IsActive, CreatedDate)
-        VALUES (@PersonId, @Username, @PasswordHash, @IsActive, GETDATE());
-        SELECT SCOPE_IDENTITY();";
+                INSERT INTO Users (PersonId, Username, PasswordHash, IsActive, CreatedDate)
+                VALUES (@PersonId, @Username, @PasswordHash, @IsActive, @CreatedDate);
+                SELECT SCOPE_IDENTITY();";
 
             using (var connection = new SqlConnection(DataAccessSettings.ConnectionString))
             using (var command = new SqlCommand(query, connection))
             {
-                command.Parameters.AddWithValue("@PersonId", user.PersonId);
-                command.Parameters.AddWithValue("@Username", user.Username);
-                command.Parameters.AddWithValue("@PasswordHash", user.PasswordHash);
+                command.Parameters.AddWithValue("@PersonId", entity.PersonId);
+                command.Parameters.AddWithValue("@Username", entity.Username);
+                command.Parameters.AddWithValue("@PasswordHash", entity.PasswordHash);
+                command.Parameters.AddWithValue("@IsActive", (object?)entity.IsActive ?? DBNull.Value);
+                command.Parameters.AddWithValue("@CreatedDate", (object?)entity.CreatedDate ?? DateTime.Now);
 
-                // التعامل مع Null بحذر للـ IsActive
-                command.Parameters.AddWithValue("@IsActive", (object?)user.IsActive ?? DBNull.Value);
-
-                connection.Open();
-                var result = command.ExecuteScalar();
+                await connection.OpenAsync();
+                var result = await command.ExecuteScalarAsync();
 
                 if (result != null && int.TryParse(result.ToString(), out int newId))
                 {
-                    user.UserId = newId;
-                    return newId; // إرجاع الرقم التعريفي الجديد (ID)
+                    entity.UserId = newId;
+                    return newId;
                 }
             }
 
-            return -1; // إرجاع -1 في حال فشلت الإضافة
+            return -1;
         }
 
-        // 3. حل خطأ: Update(User)
-        public bool Update(User user)
+        public async Task<bool> UpdateAsync(User entity)
         {
             string query = @"
                 UPDATE Users 
@@ -141,32 +119,45 @@ namespace SimpleSystem.DataAccess.Repositories.Implementations
             using (var connection = new SqlConnection(DataAccessSettings.ConnectionString))
             using (var command = new SqlCommand(query, connection))
             {
-                command.Parameters.AddWithValue("@UserId", user.UserId);
-                command.Parameters.AddWithValue("@PersonId", user.PersonId);
-                command.Parameters.AddWithValue("@Username", user.Username);
-                command.Parameters.AddWithValue("@PasswordHash", user.PasswordHash);
-                command.Parameters.AddWithValue("@IsActive", user.IsActive);
+                command.Parameters.AddWithValue("@UserId", entity.UserId);
+                command.Parameters.AddWithValue("@PersonId", entity.PersonId);
+                command.Parameters.AddWithValue("@Username", entity.Username);
+                command.Parameters.AddWithValue("@PasswordHash", entity.PasswordHash);
+                command.Parameters.AddWithValue("@IsActive", (object?)entity.IsActive ?? DBNull.Value);
 
-                connection.Open();
-                int rowsAffected = command.ExecuteNonQuery();
+                await connection.OpenAsync();
+                int rowsAffected = await command.ExecuteNonQueryAsync();
                 return rowsAffected > 0;
             }
         }
 
-        // 4. حل خطأ: Delete(int)
-        public bool Delete(int userId)
+        public async Task<bool> DeleteAsync(int entityId)
         {
             string query = "DELETE FROM Users WHERE UserId = @UserId";
 
             using (var connection = new SqlConnection(DataAccessSettings.ConnectionString))
             using (var command = new SqlCommand(query, connection))
             {
-                command.Parameters.AddWithValue("@UserId", userId);
+                command.Parameters.AddWithValue("@UserId", entityId);
 
-                connection.Open();
-                int rowsAffected = command.ExecuteNonQuery();
+                await connection.OpenAsync();
+                int rowsAffected = await command.ExecuteNonQueryAsync();
                 return rowsAffected > 0;
             }
+        }
+
+        
+
+        public async Task<User?> GetByPersonIdAsync(int personId)
+        {
+            string query = $"{BaseSelectQuery} WHERE PersonId = @PersonId";
+            return await GetSingleUserAsync(query, new SqlParameter("@PersonId", personId));
+        }
+
+        public async Task<User?> GetByUsernameAsync(string username)
+        {
+            string query = $"{BaseSelectQuery} WHERE Username = @Username";
+            return await GetSingleUserAsync(query, new SqlParameter("@Username", username));
         }
     }
 }
