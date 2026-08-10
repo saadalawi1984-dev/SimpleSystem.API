@@ -1,6 +1,9 @@
-﻿using SimpleSystem.DataAccess.Entities;
+using SimpleSystem.DataAccess.Entities;
 using SimpleSystem.DataAccess.Repositories.Implementations;
 using SimpleSystem.DataAccess.Repositories.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace SimpleSystem.Business
 {
@@ -19,6 +22,7 @@ namespace SimpleSystem.Business
         public string? Email { get; set; }
         public int CountryId { get; set; }
 
+        // Constructor للتنفيذ والـ Dependency Injection
         public PersonBusiness(IPersonRepository? personRepo = null)
         {
             _personRepo = personRepo ?? new PersonRepository();
@@ -51,28 +55,31 @@ namespace SimpleSystem.Business
             };
         }
 
-        public static List<Person> GetAllPeople(IPersonRepository? repo = null)
+        // 1. جلب كافة الأشخاص Async
+        public static async Task<List<Person>> GetAllPeopleAsync(IPersonRepository? repo = null)
         {
             var r = repo ?? new PersonRepository();
-            return r.GetAll();
+            return await r.GetAllAsync();
         }
 
-        public static PersonBusiness? Find(int id, IPersonRepository? repo = null)
+        // 2. البحث برقم الشخص Async
+        public static async Task<PersonBusiness?> FindAsync(int id, IPersonRepository? repo = null)
         {
             var r = repo ?? new PersonRepository();
-            var person = r.GetById(id);
+            var person = await r.GetByIdAsync(id);
             if (person != null)
                 return new PersonBusiness(person, enMode.Update, r);
 
             return null;
         }
 
-        public bool Save()
+        // 3. حفظ البيانات (إضافة / تعديل) Async
+        public async Task<bool> SaveAsync()
         {
             switch (Mode)
             {
                 case enMode.AddNew:
-                    int newId = _personRepo.Add(this.ToEntity());
+                    int newId = await _personRepo.AddAsync(this.ToEntity());
                     if (newId > 0)
                     {
                         this.PersonId = newId;
@@ -82,15 +89,16 @@ namespace SimpleSystem.Business
                     return false;
 
                 case enMode.Update:
-                    return _personRepo.Update(this.ToEntity());
+                    return await _personRepo.UpdateAsync(this.ToEntity());
             }
             return false;
         }
 
-        public static bool DeletePerson(int id, IPersonRepository? repo = null)
+        // 4. حذف شخص Async
+        public static async Task<bool> DeletePersonAsync(int id, IPersonRepository? repo = null)
         {
             var r = repo ?? new PersonRepository();
-            return r.Delete(id);
+            return await r.DeleteAsync(id);
         }
     }
 }
