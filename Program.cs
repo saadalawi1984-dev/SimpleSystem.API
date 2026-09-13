@@ -16,6 +16,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+new line from me nmtcode;
+
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
